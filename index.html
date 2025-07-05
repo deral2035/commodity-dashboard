@@ -1,1 +1,459 @@
-<!DOCTYPE html><html><head><title>Commodity Dashboard</title></head><body><div id='root'></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commodity Prices Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .last-updated {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #95a5a6;
+            font-size: 0.9em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .commodity-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 5px solid #3498db;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .commodity-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .commodity-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+        }
+
+        .commodity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .commodity-name {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .commodity-source {
+            background: #ecf0f1;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            color: #7f8c8d;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .commodity-source:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .price-display {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .price-comparison {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .price-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .price-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .price-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .change-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .change-positive {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+        }
+
+        .change-negative {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .change-neutral {
+            background: rgba(149, 165, 166, 0.1);
+            color: #95a5a6;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2ecc71;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .price-display {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Commodity Prices Dashboard</h1>
+            <p>Real-time commodity market data and price tracking</p>
+        </div>
+
+        <div class="last-updated" id="lastUpdated">
+            Last updated: Loading...
+        </div>
+
+        <div id="dashboardContent">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading commodity data...
+            </div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="refreshData()" title="Refresh Data">
+        🔄
+    </button>
+
+    <script>
+        // Emtia verileri
+        const commodityData = [
+            {
+                name: "Copper",
+                currentPrice: "$3.82",
+                lastMonth: "$3.60",
+                lastYear: "$3.91",
+                change: -2.3,
+                source: "🔗 Investing",
+                sourceUrl: "https://investing.com"
+            },
+            {
+                name: "Steel",
+                currentPrice: "$1,100",
+                lastMonth: "$1,050",
+                lastYear: "$1,220",
+                change: -9.8,
+                source: "🔗 TE",
+                sourceUrl: "#"
+            },
+            {
+                name: "Electricity",
+                currentPrice: "€91/MWh",
+                lastMonth: "€88",
+                lastYear: "€103",
+                change: -11.6,
+                source: "🔗 SMARD",
+                sourceUrl: "#"
+            },
+            {
+                name: "PP",
+                currentPrice: "€1,250",
+                lastMonth: "€1,210",
+                lastYear: "€1,380",
+                change: -9.4,
+                source: "🔗 ChemOrbis",
+                sourceUrl: "#"
+            },
+            {
+                name: "PE",
+                currentPrice: "€1,190",
+                lastMonth: "€1,170",
+                lastYear: "€1,310",
+                change: -9.1,
+                source: "🔗 PIE",
+                sourceUrl: "#"
+            },
+            {
+                name: "Rubber",
+                currentPrice: "€1,410",
+                lastMonth: "€1,390",
+                lastYear: "€1,520",
+                change: -7.2,
+                source: "🔗 ICIS",
+                sourceUrl: "#"
+            },
+            {
+                name: "Hemp",
+                currentPrice: "€1,980",
+                lastMonth: "€2,010",
+                lastYear: "€2,150",
+                change: -7.9,
+                source: "🔗 Fastmarkets",
+                sourceUrl: "#"
+            },
+            {
+                name: "Heating Oil",
+                currentPrice: "€1,050",
+                lastMonth: "€1,000",
+                lastYear: "€1,220",
+                change: -13.9,
+                source: "🔗 Heizoel24",
+                sourceUrl: "#"
+            }
+        ];
+
+        function getChangeClass(change) {
+            if (change > 0) return 'change-positive';
+            if (change < 0) return 'change-negative';
+            return 'change-neutral';
+        }
+
+        function getChangeIcon(change) {
+            if (change > 0) return '↗️';
+            if (change < 0) return '↘️';
+            return '→';
+        }
+
+        function createCommodityCard(commodity) {
+            const changeClass = getChangeClass(commodity.change);
+            const changeIcon = getChangeIcon(commodity.change);
+            
+            return `
+                <div class="commodity-card">
+                    <div class="status-indicator"></div>
+                    <div class="commodity-header">
+                        <div class="commodity-name">${commodity.name}</div>
+                        <a href="${commodity.sourceUrl}" class="commodity-source" target="_blank">
+                            ${commodity.source}
+                        </a>
+                    </div>
+                    
+                    <div class="price-display">${commodity.currentPrice}</div>
+                    
+                    <div class="price-comparison">
+                        <div class="price-item">
+                            <div class="price-label">Last Month</div>
+                            <div class="price-value">${commodity.lastMonth}</div>
+                        </div>
+                        <div class="price-item">
+                            <div class="price-label">Last Year</div>
+                            <div class="price-value">${commodity.lastYear}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="change-indicator ${changeClass}">
+                        <span>${changeIcon}</span>
+                        <span>${commodity.change > 0 ? '+' : ''}${commodity.change}%</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDashboard() {
+            const dashboardContent = document.getElementById('dashboardContent');
+            
+            const cardsHtml = commodityData.map(commodity => createCommodityCard(commodity)).join('');
+            
+            dashboardContent.innerHTML = `
+                <div class="dashboard-grid">
+                    ${cardsHtml}
+                </div>
+            `;
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('lastUpdated').textContent = `Last updated: ${timeString}`;
+        }
+
+        function refreshData() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.style.animation = 'spin 1s linear infinite';
+            
+            // Simüle edilmiş veri güncelleme
+            setTimeout(() => {
+                // Rastgele küçük değişiklikler ekle
+                commodityData.forEach(commodity => {
+                    const randomChange = (Math.random() - 0.5) * 0.5;
+                    commodity.change = parseFloat((commodity.change + randomChange).toFixed(1));
+                });
+                
+                renderDashboard();
+                updateLastUpdated();
+                btn.style.animation = '';
+            }, 1000);
+        }
+
+        // Sayfa yüklendiğinde dashboard'u render et
+        document.addEventListener('DOMContentLoaded', function() {
+            renderDashboard();
+            updateLastUpdated();
+            
+            // Her 5 dakikada bir otomatik güncelleme
+            setInterval(() => {
+                refreshData();
+            }, 300000);
+        });
+    </script>
+</body>
+</html>
